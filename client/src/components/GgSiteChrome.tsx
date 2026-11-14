@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { ArrowUpRight, Menu, ShoppingBag, X } from "lucide-react";
 import { Link, useLocation } from "wouter";
+import { useSiteContent } from "@/hooks/useSiteContent";
 
 const navItems = [
   { id: "home", label: "Home", href: "/#home", section: "home" },
@@ -13,11 +14,11 @@ const navItems = [
   { id: "community", label: "Community", href: "/#community", section: "community" },
 ] as const;
 
-export function Brand() {
+export function Brand({ tagline = "GAME SMART. PLAY HARD." }: { tagline?: string }) {
   return (
     <Link className="brand-lockup" href="/" aria-label="GG SUPPLY home">
       <span className="brand-glyph" aria-hidden="true"><span>G</span><span>G</span></span>
-      <span className="brand-words">GG <b>SUPPLY</b><small>GAME SMART. PLAY HARD.</small></span>
+      <span className="brand-words">GG <b>SUPPLY</b><small>{tagline}</small></span>
     </Link>
   );
 }
@@ -25,6 +26,7 @@ export function Brand() {
 export function SiteHeader({ activeSection = "home" }: { activeSection?: string }) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [location] = useLocation();
+  const { settings } = useSiteContent();
   const currentPath = location.split("?")[0].split("#")[0] || "/";
   const isHome = currentPath === "/";
 
@@ -33,12 +35,12 @@ export function SiteHeader({ activeSection = "home" }: { activeSection?: string 
       <div className="announcement-bar">
         <div className="announcement-inner">
           <span className="announce-left"><span className="live-dot" /> YOUR NEXT LEVEL STARTS HERE</span>
-          <span className="announce-right">GG SUPPLY <i /> GAME SMART. PLAY HARD.</span>
+          <span className="announce-right">GG SUPPLY <i /> {settings.tagline}</span>
         </div>
       </div>
       <header className="site-header">
         <div className="header-inner">
-          <Brand />
+          <Brand tagline={settings.tagline} />
           <button className="mobile-menu-button" onClick={() => setMobileOpen((open) => !open)} aria-label={mobileOpen ? "Close navigation" : "Open navigation"} aria-expanded={mobileOpen}>
             {mobileOpen ? <X size={21} /> : <Menu size={21} />}
           </button>
@@ -72,11 +74,16 @@ export function SiteHeader({ activeSection = "home" }: { activeSection?: string 
 }
 
 export function SiteFooter() {
+  const { settings } = useSiteContent();
+  const splitAt = settings.tagline.indexOf(".");
+  const firstLine = splitAt >= 0 ? settings.tagline.slice(0, splitAt + 1) : settings.tagline;
+  const secondLine = splitAt >= 0 ? settings.tagline.slice(splitAt + 1).trim() : "";
+
   return (
     <footer className="site-footer">
       <div className="page-wrap footer-main">
-        <Brand />
-        <p>Game smart.<br /><span>Play hard.</span></p>
+        <Brand tagline={settings.tagline} />
+        <p>{firstLine}{secondLine && <><br /><span>{secondLine}</span></>}</p>
         <div className="footer-links">
           <span>EXPLORE GG SUPPLY</span>
           <div>
@@ -86,7 +93,7 @@ export function SiteFooter() {
         <a className="back-top" href="/#home" aria-label="Back to top"><ArrowUpRight size={18} /></a>
       </div>
       <div className="footer-bottom page-wrap">
-        <span>© GG SUPPLY — GAME SMART. PLAY HARD.</span><span>GAMING MARKET &amp; COMMUNITY</span><span>BUILT FOR PLAYERS</span>
+        <span>© GG SUPPLY — {settings.tagline}</span><span>GAMING MARKET &amp; COMMUNITY</span><span>BUILT FOR PLAYERS</span>
       </div>
     </footer>
   );

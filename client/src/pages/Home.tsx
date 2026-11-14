@@ -24,6 +24,7 @@ import {
   Zap,
 } from "lucide-react";
 import { SiteFooter, SiteHeader } from "@/components/GgSiteChrome";
+import { useSiteContent } from "@/hooks/useSiteContent";
 
 const navigation = [
   { id: "home", label: "Home" },
@@ -35,23 +36,9 @@ const navigation = [
   { id: "community", label: "Community" },
 ];
 
-const topUpGames = [
-  { name: "PUBG MOBILE", product: "UC top-up", tag: "BATTLE ROYALE", icon: Crosshair, color: "cyan" },
-  { name: "MOBILE LEGENDS", product: "Diamond top-up", tag: "MOBA", icon: Sparkles, color: "violet" },
-  { name: "FREE FIRE", product: "Diamond top-up", tag: "BATTLE ROYALE", icon: Flame, color: "coral" },
-];
-
-const coachingOptions = [
-  { name: "1:1 SESSION", label: "Personal coaching", description: "A focused plan shaped around your game and goals.", icon: Target, note: "SOLO QUEUE", game: "Choose game", specialty: "Rank & mechanics", availability: "Add open slots" },
-  { name: "REPLAY REVIEW", label: "See the turning point", description: "Review key decisions and take away clear next steps.", icon: Search, note: "VOD BREAKDOWN", game: "Choose game", specialty: "Replay analysis", availability: "Set review times" },
-  { name: "SQUAD PRACTICE", label: "Move as one", description: "Build stronger calls, roles, and team habits together.", icon: Users, note: "TEAM PLAY", game: "Choose game", specialty: "Comms & roles", availability: "Add team slots" },
-];
-
-const guideItems = [
-  { index: "01", category: "START HERE", title: "Build your warm-up routine", icon: Zap },
-  { index: "02", category: "GET SMARTER", title: "Make every match count", icon: Target },
-  { index: "03", category: "PLAY TOGETHER", title: "Communicate like a squad", icon: Users },
-];
+const marketIcons = { crosshair: Crosshair, sparkles: Sparkles, flame: Flame, calendar: CalendarDays, gift: ShoppingBag, target: Target };
+const coachingIcons = { target: Target, search: Search, users: Users };
+const guideIcons = [Zap, Target, Users];
 
 function SectionIntro({ eyebrow, title, copy, index }: { eyebrow: string; title: ReactNode; copy: string; index: string }) {
   return (
@@ -69,6 +56,10 @@ export default function Home() {
   const [activeId, setActiveId] = useState("home");
   const [selectedGame, setSelectedGame] = useState<string | null>(null);
   const [toast, setToast] = useState("");
+  const content = useSiteContent();
+  const featuredNews = content.news[0];
+  const featuredTournament = content.tournaments[0];
+  const topUpProducts = content.market.filter((product) => product.category === "CURRENCY").slice(0, 3);
 
   useEffect(() => {
     const sections = navigation.map(({ id }) => document.getElementById(id)).filter(Boolean) as HTMLElement[];
@@ -107,14 +98,14 @@ export default function Home() {
 
       <main>
         <section className="hero" id="home">
-          <div className="hero-art" aria-hidden="true" />
+          <div className="hero-art" aria-hidden="true">{content.artwork.homeHeroUrl && <img src={content.artwork.homeHeroUrl} alt="" />}</div>
           <div className="hero-grid-overlay" aria-hidden="true" />
           <div className="hero-content page-wrap">
             <div className="hero-copy">
               <div className="eyebrow"><span className="eyebrow-mark"><CircleDot size={13} /></span> THE GAMING SUPPLY DROP</div>
-              <p className="hero-pretitle">GAME SMART. PLAY HARD.</p>
+              <p className="hero-pretitle">{content.settings.tagline}</p>
               <h1>LOAD UP.<br /><span>LOCK IN.</span></h1>
-              <p className="hero-description">Gaming news, in-game top-ups, and coaching—your next move starts with GG SUPPLY.</p>
+              <p className="hero-description">{content.settings.heroDescription}</p>
               <div className="hero-buttons">
                 <button className="button button-accent" onClick={() => goTo("top-up")}>Explore top ups <ArrowUpRight size={17} /></button>
                 <button className="button button-ghost" onClick={() => goTo("news")}>Latest news <ArrowDownRight size={17} /></button>
@@ -148,34 +139,33 @@ export default function Home() {
             <div className="news-layout">
               <article className="news-feature">
                 <div className="feature-art feature-art-main">
+                  {content.artwork.newsFeatureUrl && <img className="feature-art-image" src={content.artwork.newsFeatureUrl} alt="" />}
                   <div className="feature-art-lines" />
                   <div className="feature-badge"><Newspaper size={15} /> GG NEWSROOM</div>
                   <div className="feature-art-title"><span>STAY</span><strong>IN THE<br />GAME.</strong></div>
                   <div className="feature-art-index">GG—NEWS / 001</div>
                 </div>
                 <div className="news-feature-copy">
-                  <div className="story-meta"><span>THE LATEST DROP</span><span><Clock3 size={13} /> QUICK READS</span></div>
-                  <h3>Game news, without the noise.</h3>
-                  <p>A home for esports results, update roundups, and community stories.</p>
-                  <button className="text-link" onClick={() => setToast("News cards are a layout preview. Add your stories to make this section live.")}>Explore the newsroom <ArrowRight size={16} /></button>
+                  <div className="story-meta"><span>{featuredNews?.category ?? "GG NEWSROOM"}</span><span><Clock3 size={13} /> QUICK READS</span></div>
+                  <h3>{featuredNews?.title ?? "The newsroom is ready."}</h3>
+                  <p>{featuredNews?.summary ?? "Add the first GG SUPPLY news story from the admin panel."}</p>
+                  <button className="text-link" onClick={() => setToast("Full article pages can be added when you're ready.")}>Explore the newsroom <ArrowRight size={16} /></button>
                 </div>
               </article>
               <div className="news-stack">
-                <article className="news-card news-card-cyan">
-                  <div className="news-card-top"><span>01 / GAME UPDATE</span><span className="news-icon"><Zap size={17} /></span></div>
-                  <h3>Patch notes,<br />made player-ready.</h3>
-                  <p>Clear recaps for your next session.</p>
-                  <button onClick={() => setToast("This sample story card is ready for your first news post.")} aria-label="Preview the patch notes story"><ArrowUpRight size={17} /></button>
-                </article>
-                <article className="news-card news-card-violet">
-                  <div className="news-card-top"><span>02 / COMPETITIVE</span><span className="news-icon"><Trophy size={17} /></span></div>
-                  <h3>Big moments.<br />Bigger plays.</h3>
-                  <p>Tournament stories from the scene.</p>
-                  <button onClick={() => goTo("tournaments")} aria-label="Go to tournaments"><ArrowUpRight size={17} /></button>
-                </article>
+                {content.news.slice(1, 3).map((post, index) => {
+                  const Icon = index % 2 === 0 ? Zap : Trophy;
+                  return <article className={`news-card ${index % 2 === 0 ? "news-card-cyan" : "news-card-violet"}`} key={post.id}>
+                    {post.imageUrl && <img className="news-card-image" src={post.imageUrl} alt="" />}
+                    <div className="news-card-top"><span>0{index + 1} / {post.category}</span><span className="news-icon"><Icon size={17} /></span></div>
+                    <h3>{post.title}</h3><p>{post.summary}</p>
+                    <button onClick={() => setToast("Full article pages can be added when you're ready.")} aria-label={`Open ${post.title}`}><ArrowUpRight size={17} /></button>
+                  </article>;
+                })}
+                {content.news.length < 2 && <article className="news-card news-card-violet"><div className="news-card-top"><span>NEWSROOM</span><span className="news-icon"><Newspaper size={17} /></span></div><h3>One more story<br />starts here.</h3><p>Add another news post from the admin panel.</p></article>}
               </div>
             </div>
-            <div className="preview-note"><span>SAMPLE LAYOUT</span><i /> Replace these preview cards with your published GG SUPPLY stories.</div>
+            <div className="preview-note"><span>GG NEWSROOM</span><i /> News and artwork can be updated from the admin panel.</div>
           </div>
         </section>
 
@@ -185,14 +175,14 @@ export default function Home() {
             <SectionIntro index="02" eyebrow="THE SUPPLY CRATE" title={<>YOUR GAME.<br /><span>YOUR CURRENCY.</span></>} copy="A clear, game-first place to show top-up options. Pick a title to preview its product layout." />
             <div className="topup-toolbar"><div className="toolbar-chip"><ShoppingBag size={15} /> TOP-UP CATALOG <span>PREVIEW</span></div><p>Choose a game to see how its offer card opens.</p></div>
             <div className="game-cards">
-              {topUpGames.map((game, index) => {
-                const Icon = game.icon;
+              {topUpProducts.map((game, index) => {
+                const Icon = marketIcons[game.icon];
                 return (
-                  <article className={`game-card game-${game.color}`} key={game.name}>
-                    <div className="game-card-head"><span className="game-tag">{game.tag}</span><span className="game-number">0{index + 1}</span></div>
+                  <article className={`game-card game-${game.color}`} key={game.id}>
+                    <div className="game-card-head"><span className="game-tag">{game.category}</span><span className="game-number">0{index + 1}</span></div>
                     <div className="game-art-symbol"><Icon size={38} strokeWidth={1.35} /></div>
-                    <div className="game-card-copy"><h3>{game.name}</h3><p>{game.product}</p></div>
-                    <button className="game-card-action" onClick={() => setSelectedGame(game.name)}>View options <ArrowUpRight size={16} /></button>
+                    <div className="game-card-copy"><h3>{game.game}</h3><p>{game.offer}</p></div>
+                    <button className="game-card-action" onClick={() => setSelectedGame(game.game)}>View options <ArrowUpRight size={16} /></button>
                   </article>
                 );
               })}
@@ -211,10 +201,10 @@ export default function Home() {
           <div className="page-wrap">
             <SectionIntro index="03" eyebrow="THE TRAINING ROOM" title={<>PLAY WITH<br /><span>INTENTION.</span></>} copy="Give players a clear path to find focused practice, honest feedback, and stronger team play." />
             <div className="coaching-grid">
-              {coachingOptions.map((option, index) => {
-                const Icon = option.icon;
+              {content.coaching.map((option, index) => {
+                const Icon = coachingIcons[option.icon];
                 return (
-                  <article className="coach-card" key={option.name}>
+                  <article className="coach-card" key={option.id}>
                     <div className="coach-card-top"><span className="coach-count">0{index + 1}</span><span className="coach-icon"><Icon size={20} /></span></div>
                     <span className="coach-note">{option.note}</span>
                     <h3>{option.label}</h3>
@@ -230,6 +220,7 @@ export default function Home() {
               })}
             </div>
             <div className="coach-banner"><div className="coach-banner-icon"><Crosshair size={22} /></div><div><span>COACHING, YOUR WAY</span><p>Add your games, coaches, specialties, and available slots here.</p></div><button onClick={() => setToast("Your coach profiles can be added to this section next.")}>Set up coaching <ArrowRight size={16} /></button></div>
+            {content.coaches.length > 0 && <div className="coach-profile-grid">{content.coaches.map((coach) => <article className="coach-profile-card" key={coach.id}>{coach.avatarUrl ? <img src={coach.avatarUrl} alt="" /> : <span className="coach-profile-mark"><Users size={21} /></span>}<div><small>{coach.game} / {coach.specialty}</small><h3>{coach.name}</h3><p>{coach.bio}</p><span>{coach.availability || "Availability to be announced"}</span></div></article>)}</div>}
           </div>
         </section>
 
@@ -238,14 +229,14 @@ export default function Home() {
             <div className="tournament-copy">
               <div className="section-index"><span>04</span><i /> THE ARENA</div>
               <h2>PLAY FOR<br /><span>SOMETHING.</span></h2>
-              <p>A home for GG SUPPLY community tournaments, brackets, match updates, and winner announcements.</p>
-              <button className="button button-accent" onClick={() => setToast("Tournament information can be posted here when registration is open.")}>Explore tournaments <ArrowUpRight size={17} /></button>
+              <p>{featuredTournament?.description ?? "A home for GG SUPPLY community tournaments, brackets, match updates, and winner announcements."}</p>
+              <a className="button button-accent" href="/tournaments">Explore tournaments <ArrowUpRight size={17} /></a>
             </div>
             <div className="tournament-card">
               <div className="tourney-orbit orbit-one" /><div className="tourney-orbit orbit-two" />
               <div className="tourney-topline"><span><Swords size={15} /> COMMUNITY MATCH</span><span>GG / 04</span></div>
               <div className="versus-mark"><span>GG</span><i>VS</i><span>YOU</span></div>
-              <div className="tourney-info"><div><span>FORMAT</span><b>BOX TDM</b></div><div><span>PLAYER SLOTS</span><b>8 PLAYERS</b></div></div>
+              <div className="tourney-info"><div><span>FORMAT</span><b>{featuredTournament?.format ?? "BOX TDM"}</b></div><div><span>PLAYER SLOTS</span><b>{featuredTournament?.playerCap ?? 8} PLAYERS</b></div></div>
               <div className="tourney-bottom"><span>BRACKET PREVIEW</span><ArrowUpRight size={16} /></div>
             </div>
           </div>
@@ -255,9 +246,9 @@ export default function Home() {
           <div className="page-wrap">
             <SectionIntro index="05" eyebrow="THE FIELD GUIDE" title={<>KNOW THE<br /><span>GAME PLAN.</span></>} copy="Short reads and practical notes built to help players learn, prepare, and improve." />
             <div className="guide-list">
-              {guideItems.map((item) => {
-                const Icon = item.icon;
-                return <button className="guide-row" key={item.index} onClick={() => setToast("This guide is a sample card. Add your own player tips and walkthroughs.")}><span className="guide-index">{item.index}</span><span className="guide-icon"><Icon size={19} /></span><span className="guide-text"><small>{item.category}</small><b>{item.title}</b></span><span className="guide-arrow"><ArrowUpRight size={18} /></span></button>;
+              {content.guides.map((item, index) => {
+                const Icon = guideIcons[index % guideIcons.length];
+                return <button className="guide-row" key={item.id} onClick={() => setToast("Guide articles can be added when you're ready.")}><span className="guide-index">{String(index + 1).padStart(2, "0")}</span><span className="guide-icon"><Icon size={19} /></span><span className="guide-text"><small>{item.category}</small><b>{item.title}</b></span><span className="guide-arrow"><ArrowUpRight size={18} /></span></button>;
               })}
             </div>
           </div>
@@ -267,8 +258,8 @@ export default function Home() {
           <div className="community-mist" aria-hidden="true" />
           <div className="page-wrap community-inner">
             <div className="community-icon"><Users size={25} /></div>
-            <div className="community-copy"><span>06 / THE LOBBY</span><h2>GOOD GAMES.<br /><em>GOOD PEOPLE.</em></h2><p>Make room for your community links, announcements, and player highlights.</p></div>
-            <button className="button button-light" onClick={() => setToast("Add your community invite link here when you're ready.")}>Join the community <ArrowUpRight size={17} /></button>
+            <div className="community-copy"><span>06 / THE LOBBY</span><h2>GOOD GAMES.<br /><em>GOOD PEOPLE.</em></h2><p>{content.settings.communityMessage}</p></div>
+            {content.settings.communityUrl ? <a className="button button-light" href={content.settings.communityUrl} target="_blank" rel="noreferrer">Join the community <ArrowUpRight size={17} /></a> : <button className="button button-light" onClick={() => setToast("Add a community invite link in Site Settings when you're ready.")}>Join the community <ArrowUpRight size={17} /></button>}
             <div className="community-orbit" aria-hidden="true"><div /><div /><div /></div>
           </div>
         </section>

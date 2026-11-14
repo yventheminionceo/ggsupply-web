@@ -1,9 +1,11 @@
 # TODO
 
-- [x] **Homepage tagline** — Change “PLAY SMART. SHOW UP.” to “GAME SMART. PLAY HARD.”
-- [x] **Gaming Market page** — Add a separate Gaming Market page for gaming products and top-up categories, consistent with the GG SUPPLY black-and-white mist theme and accent colors. Current product names, prices, availability, and checkout are placeholders.
-- [x] **Tournament page** — Add a dedicated tournament page. For the PUBG MOBILE TDM (BOX) tournament, show 8 players, 2,000 MMK registration fee, and 15,000 MMK champion prize, with a clear bracket/list layout and no invented player names or registration status.
-- [ ] **Gmail-restricted admin page** — Add an admin area accessible only to the one exact Gmail address the user provides; unauthorized visitors must not see or edit admin content. Admin can edit news, upload/replace artwork, create or edit tournament posts, and add coaching listings.
-- [ ] **Saved admin changes** — Persist approved admin edits so updated news, artwork, tournament posts, and coach listings appear on their public pages.
-
-Admin access and saved editing remain gated until the user provides the exact Gmail address and approves server/database enablement.
+- [x] **Brand and public layout** — Use the GG SUPPLY gaming-site identity, the tagline “Game Smart. Play Hard.”, a black/white misty dark aesthetic, and cyan/coral/violet accents; retain the Home, Gaming Market, and Tournaments pages and responsive layouts.
+- [x] **Gaming Market page** — Provide a separate public Gaming Market page with the gaming catalogue layout.
+- [x] **Tournaments page** — Provide a separate PUBG MOBILE TDM (BOX) tournament page with the 8-player structure, 2,000 MMK registration fee, and 15,000 MMK champion prize.
+- [x] **Public visibility** — The current published website is public. Keep its current visibility setting unchanged unless the user asks to change it.
+- [ ] **Admin login** — Only `yemannhein26@gmail.com` may access admin data or mutations. Every new sign-in must require that exact approved email, a new site admin password, and a fresh six-digit one-time code delivered to that Gmail inbox. The code must expire after 10 minutes, be single-use, and lock after five incorrect attempts. Protect sessions and admin mutations server-side. Do not use the password previously shared in chat. Collect a new 16+ character password and a Gmail App Password using protected project input; keep both out of source and logs.
+- [ ] **Admin content management** — After authentication, let the administrator edit site settings, news posts, artwork, market listings, tournament posts, coaching offers, coach profiles, and guides. Allow new coach profiles to be added and existing entries to be edited or removed.
+- [ ] **Persistent public content** — Save each edited section in the managed database and have the public Home, Gaming Market, and Tournaments pages render the saved values after reload, with safe built-in defaults when no saved section exists.
+- [ ] **Artwork upload** — Allow only the authenticated administrator to upload PNG, JPEG, WebP, or GIF artwork up to 5 MB; validate content on the server, store the image in durable project storage, and use the stable asset address in site content.
+- [ ] **Clean site URL and residency** — Keep the current `ggsupply-vnpybpfl.manus.space` address unless the user confirms that they own `ggsupply.com` and asks to connect it. Do not buy a domain or alter DNS without direction. Keep the current on-demand hosting mode; explain that it can cold-start after idle traffic and is not the same as a continuously warm always-on service.
