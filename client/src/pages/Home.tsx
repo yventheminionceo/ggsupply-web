@@ -11,8 +11,6 @@ import {
   Clock3,
   Crosshair,
   Flame,
-  Gamepad2,
-  Menu,
   Newspaper,
   Search,
   Shield,
@@ -25,6 +23,7 @@ import {
   X,
   Zap,
 } from "lucide-react";
+import { SiteFooter, SiteHeader } from "@/components/GgSiteChrome";
 
 const navigation = [
   { id: "home", label: "Home" },
@@ -54,15 +53,6 @@ const guideItems = [
   { index: "03", category: "PLAY TOGETHER", title: "Communicate like a squad", icon: Users },
 ];
 
-function Brand() {
-  return (
-    <a className="brand-lockup" href="#home" aria-label="GG SUPPLY home">
-      <span className="brand-glyph" aria-hidden="true"><span>G</span><span>G</span></span>
-      <span className="brand-words">GG <b>SUPPLY</b><small>GAME SMART. PLAY HARD.</small></span>
-    </a>
-  );
-}
-
 function SectionIntro({ eyebrow, title, copy, index }: { eyebrow: string; title: ReactNode; copy: string; index: string }) {
   return (
     <div className="section-intro">
@@ -77,7 +67,6 @@ function SectionIntro({ eyebrow, title, copy, index }: { eyebrow: string; title:
 
 export default function Home() {
   const [activeId, setActiveId] = useState("home");
-  const [mobileOpen, setMobileOpen] = useState(false);
   const [selectedGame, setSelectedGame] = useState<string | null>(null);
   const [toast, setToast] = useState("");
 
@@ -109,39 +98,12 @@ export default function Home() {
 
   const goTo = (id: string) => {
     setActiveId(id);
-    setMobileOpen(false);
     document.getElementById(id)?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   return (
     <div className="site-shell">
-      <div className="announcement-bar">
-        <div className="announcement-inner">
-          <span className="announce-left"><span className="live-dot" /> YOUR NEXT LEVEL STARTS HERE</span>
-          <span className="announce-right">GG SUPPLY <i /> GAME SMART. PLAY HARD.</span>
-        </div>
-      </div>
-
-      <header className="site-header">
-        <div className="header-inner">
-          <Brand />
-          <button className="mobile-menu-button" onClick={() => setMobileOpen((open) => !open)} aria-label={mobileOpen ? "Close navigation" : "Open navigation"} aria-expanded={mobileOpen}>
-            {mobileOpen ? <X size={21} /> : <Menu size={21} />}
-          </button>
-          <nav className={`primary-nav${mobileOpen ? " is-open" : ""}`} aria-label="Main categories">
-            {navigation.map((item) => (
-              <a key={item.id} className={activeId === item.id ? "nav-link active" : "nav-link"} href={`#${item.id}`} onClick={(event) => { event.preventDefault(); goTo(item.id); }}>
-                {item.label}
-              </a>
-            ))}
-          </nav>
-          <div className="header-actions">
-            <a className="topup-header-button" href="#top-up" onClick={(event) => { event.preventDefault(); goTo("top-up"); }}>
-              <ShoppingBag size={15} strokeWidth={2.2} /> <span>Explore Top Up</span><ArrowUpRight size={15} />
-            </a>
-          </div>
-        </div>
-      </header>
+      <SiteHeader activeSection={activeId} />
 
       <main>
         <section className="hero" id="home">
@@ -150,7 +112,7 @@ export default function Home() {
           <div className="hero-content page-wrap">
             <div className="hero-copy">
               <div className="eyebrow"><span className="eyebrow-mark"><CircleDot size={13} /></span> THE GAMING SUPPLY DROP</div>
-              <p className="hero-pretitle">PLAY SMART. SHOW UP.</p>
+              <p className="hero-pretitle">GAME SMART. PLAY HARD.</p>
               <h1>LOAD UP.<br /><span>LOCK IN.</span></h1>
               <p className="hero-description">Gaming news, in-game top-ups, and coaching—your next move starts with GG SUPPLY.</p>
               <div className="hero-buttons">
@@ -311,15 +273,7 @@ export default function Home() {
           </div>
         </section>
 
-        <footer className="site-footer">
-          <div className="page-wrap footer-main">
-            <Brand />
-            <p>Game smart.<br /><span>Play hard.</span></p>
-            <div className="footer-links"><span>EXPLORE GG SUPPLY</span><div>{navigation.slice(1, 5).map((item) => <a key={item.id} href={`#${item.id}`} onClick={(event) => { event.preventDefault(); goTo(item.id); }}>{item.label}</a>)}</div></div>
-            <button className="back-top" onClick={() => goTo("home")} aria-label="Back to top"><ArrowUpRight size={18} /></button>
-          </div>
-          <div className="footer-bottom page-wrap"><span>© GG SUPPLY — GAME SMART. PLAY HARD.</span><span>HOMEPAGE LAYOUT PREVIEW</span><span>BUILT FOR PLAYERS <Gamepad2 size={13} /></span></div>
-        </footer>
+        <SiteFooter />
       </main>
 
       {selectedGame && (

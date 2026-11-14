@@ -1,1 +1,1 @@
-{"routes":[{"path":"/","title":"GG SUPPLY Gaming"}]}
+{"routes":[{"path":"/","title":"GG SUPPLY Home"},{"path":"/market","title":"Gaming Market"},{"path":"/tournaments","title":"Tournaments"}]}

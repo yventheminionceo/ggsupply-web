@@ -1,8 +1,9 @@
 # TODO
 
-- [x] **Hero and homepage** — Build a GG SUPPLY gaming-focused homepage with a prominent GG SUPPLY hero section and clear calls to explore categories.
-- [x] **Category tabs and extension** — Provide primary tabbed navigation for News, Top Up, Coaching, and additional gaming categories; include an expandable category structure for Tournaments, Guides, Community, or Deals.
-- [x] **News cards** — Include a News section with featured stories and reusable article cards.
-- [x] **Top Up cards** — Include a Top Up section displaying supported games and available top-up options in a clear card layout. Current game and pack names are examples with price/amount placeholders.
-- [x] **Coaching offers** — Include a Coaching section showcasing coaches or coaching offers with game, specialty, and availability details. Current game and slot values are editable placeholders.
-- [x] **Visual design and responsive layout** — Use a consistent gaming-style interface with a dark, misty black-and-white visual system and restrained color accents; optimize browsing for desktop and mobile.
+- [x] **Homepage tagline** — Change “PLAY SMART. SHOW UP.” to “GAME SMART. PLAY HARD.”
+- [x] **Gaming Market page** — Add a separate Gaming Market page for gaming products and top-up categories, consistent with the GG SUPPLY black-and-white mist theme and accent colors. Current product names, prices, availability, and checkout are placeholders.
+- [x] **Tournament page** — Add a dedicated tournament page. For the PUBG MOBILE TDM (BOX) tournament, show 8 players, 2,000 MMK registration fee, and 15,000 MMK champion prize, with a clear bracket/list layout and no invented player names or registration status.
+- [ ] **Gmail-restricted admin page** — Add an admin area accessible only to the one exact Gmail address the user provides; unauthorized visitors must not see or edit admin content. Admin can edit news, upload/replace artwork, create or edit tournament posts, and add coaching listings.
+- [ ] **Saved admin changes** — Persist approved admin edits so updated news, artwork, tournament posts, and coach listings appear on their public pages.
+
+Admin access and saved editing remain gated until the user provides the exact Gmail address and approves server/database enablement.
