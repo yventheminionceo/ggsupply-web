@@ -1,28 +1,27 @@
 # GG SUPPLY Admin Setup
 
-The Admin page is served at `/admin`. Its API checks the exact allowlisted account `yemannhein26@gmail.com`; the login page can be opened by anyone, but admin content and mutation endpoints require a valid server session.
+The admin page is `/admin`. Anyone can open the sign-in page, but only the exact allowlisted account `yemannhein26@gmail.com` can obtain a server session or access admin data and mutations.
 
-## Required private settings
+## Current sign-in flow
 
-The server needs these protected project values before it can send a login code:
+For now, sign in with the approved Gmail address and the site admin password only. Email one-time codes are disabled, and the active application does not call Gmail SMTP. The server requires the configured admin password to be at least 16 characters; the login is rate-limited to 10 attempts per 15-minute window. Successful sessions expire after 12 hours. Session tokens are stored as hashes, HTTPS cookies use the required cross-site Preview attributes, and content mutations require a CSRF token.
 
-- `GG_SUPPLY_ADMIN_PASSWORD` — choose a new, unique password with at least 16 characters. Do not reuse a password previously shared in chat.
-- `GG_SUPPLY_GMAIL_APP_PASSWORD` — an App Password generated for the approved Gmail account. This is not the normal Gmail sign-in password.
+`GG_SUPPLY_ADMIN_PASSWORD` is the only required credential. Set or replace it through the protected project input card; choose **All environments** so Preview and the published website use the same value. Never paste the password in chat or put it in source files, `.env.example`, Git, screenshots, or logs. The previously shared chat password must not be reused.
 
-Use the secure project input card to set both values. Choose the **All environments** option so both Preview and the published site can use them. After saving, the card will clear the plaintext fields; that is expected. The configuration view should show the variable names as configured, with their values redacted. Never paste either value into chat, source files, `.env.example`, or Git.
+`GG_SUPPLY_GMAIL_APP_PASSWORD` is not required while email-code login is off. It is not read by the active login route. The OTP challenge tables remain in the database but are unused; no database migration is needed to disable or restore the UI step.
 
-The Gmail App Password is used only by the server-side Nodemailer transport over Gmail SMTP. The browser never receives it. A fresh six-digit email code is required at each sign-in; codes expire after 10 minutes and are single-use. The application rate-limits sign-in and code requests.
+## Content and storage
 
-## Database and development
+The admin studio supports site settings, news, artwork, Gaming Market listings, tournaments, coaching offers, coach profiles, and guides. PNG, JPEG, WebP, and GIF artwork up to 5 MB is validated on the server and stored at a stable Manus Storage address. Saved section content is persisted in managed MySQL and appears on the public site after refresh.
 
-The managed MySQL database stores OTP challenge hashes, admin session hashes, rate-limit windows, and edited site content. It is shared between Preview and the published app. Use only additive migrations and do not run destructive test writes against it.
+The managed MySQL database is shared between Preview and production. Avoid destructive database tests and do not write disposable content into it.
 
-Development commands:
+## Development commands
 
 ```sh
 pnpm check
-pnpm db:push
+pnpm build
 pnpm dev
 ```
 
-`pnpm db:push` generates and applies Drizzle migrations. Inspect newly generated SQL before applying schema changes. The admin UI supports site settings, news, artwork, Gaming Market listings, tournaments, coaching offers, coach profiles, and guides. Artwork accepts PNG, JPEG, WebP, or GIF files up to 5 MB and is stored under a stable `/manus-storage/` address.
+The existing migrations have already been applied. Do not run `pnpm db:push` unless the schema changes; inspect any generated additive migration before applying it.

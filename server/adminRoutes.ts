@@ -1,9 +1,8 @@
-import { createHash, randomBytes, randomInt } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import type { Express, NextFunction, Request, Response } from "express";
 import { and, eq, gt, isNull, sql } from "drizzle-orm";
-import nodemailer from "nodemailer";
 import { z } from "zod";
-import { adminAuthRateLimits, adminLoginChallenges, adminSessions, siteContent as siteContentTable } from "../drizzle/schema";
+import { adminAuthRateLimits, adminSessions, siteContent as siteContentTable } from "../drizzle/schema";
 import { editableSections, defaultSiteContent, type EditableSection, type SiteContent } from "../shared/siteContent";
 import { getDb } from "./db";
 import { storagePut } from "./storage";
@@ -11,17 +10,12 @@ import { ENV } from "./_core/env";
 import {
   ADMIN_EMAIL,
   ADMIN_CSRF_COOKIE,
-  ADMIN_OTP_MAX_ATTEMPTS,
-  ADMIN_OTP_TTL_MS,
   ADMIN_SESSION_COOKIE,
   ADMIN_SESSION_TTL_MS,
   adminCsrfCookieOptions,
   adminCookieOptions,
-  constantTimeHexEqual,
   constantTimeSecretEqual,
-  hashOneTimeCode,
   hashSessionToken,
-  maskEmail,
   normalizeEmail,
 } from "./adminSecurity";
 
@@ -107,7 +101,6 @@ const sectionSchemas = {
 };
 
 const loginSchema = z.object({ email: z.string().trim().email().max(320), password: z.string().min(1).max(256) });
-const verifyCodeSchema = z.object({ challengeId: z.string().regex(/^[a-f0-9]{64}$/i), code: z.string().regex(/^\d{6}$/) });
 const uploadSchema = z.object({
   contentType: z.enum(["image/png", "image/jpeg", "image/webp", "image/gif"]),
   base64: z.string().min(1).max(7_000_000),
@@ -115,8 +108,6 @@ const uploadSchema = z.object({
 const MAX_ARTWORK_BYTES = 5 * 1024 * 1024;
 const LOGIN_WINDOW_MS = 15 * 60 * 1000;
 const MAX_LOGIN_ATTEMPTS_PER_WINDOW = 10;
-const MAX_OTP_EMAILS_PER_WINDOW = 3;
-const OTP_RESEND_COOLDOWN_MS = 60 * 1000;
 
 function isSafeImageUrl(value: string): boolean {
   if (!value) return true;
@@ -272,23 +263,6 @@ async function hitRateLimit(db: NonNullable<Awaited<ReturnType<typeof getDb>>>, 
   return Boolean(row && row.requestCount > maximum);
 }
 
-function normalizedGmailAppPassword(): string {
-  return ENV.gmailAppPassword.replace(/\s+/g, "");
-}
-
-function createMailer() {
-  const appPassword = normalizedGmailAppPassword();
-  return nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 465,
-    secure: true,
-    auth: { user: ADMIN_EMAIL, pass: appPassword },
-    connectionTimeout: 10_000,
-    greetingTimeout: 10_000,
-    socketTimeout: 15_000,
-  });
-}
-
 function imageExtension(contentType: string): string {
   switch (contentType) {
     case "image/png": return "png";
@@ -334,7 +308,15 @@ export function registerAdminRoutes(app: Express): void {
     }
   });
 
-  app.post("/api/admin/auth/request-code", requireJson, async (req, res) => {
+  app.post("/api/admin/auth/request-code", requireJson, (_req, res) => {
+    res.status(410).json({ error: "Email-code sign-in is disabled. Use the approved email and admin password." });
+  });
+
+  app.post("/api/admin/auth/verify-code", requireJson, (_req, res) => {
+    res.status(410).json({ error: "Email-code sign-in is disabled. Use the approved email and admin password." });
+  });
+
+  app.post("/api/admin/auth/login", requireJson, async (req, res) => {
     const body = loginSchema.safeParse(req.body);
     if (!body.success) {
       res.status(400).json({ error: "Enter the approved Gmail address and admin password." });
@@ -345,9 +327,8 @@ export function registerAdminRoutes(app: Express): void {
       res.status(401).json({ error: "Check the approved email and admin password." });
       return;
     }
-    const gmailAppPassword = normalizedGmailAppPassword();
-    if (ENV.adminPassword.length < 16 || gmailAppPassword.length !== 16) {
-      res.status(503).json({ error: "Secure admin sign-in is not ready. The Gmail App Password must be a 16-character Google App Password saved through the secure input card." });
+    if (ENV.adminPassword.length < 16) {
+      res.status(503).json({ error: "Admin sign-in is not configured. Set a unique password of at least 16 characters through the secure project input card." });
       return;
     }
 
@@ -357,7 +338,7 @@ export function registerAdminRoutes(app: Express): void {
         res.status(503).json({ error: "The admin database is unavailable." });
         return;
       }
-      if (await hitRateLimit(db, "admin-login-password", MAX_LOGIN_ATTEMPTS_PER_WINDOW)) {
+      if (await hitRateLimit(db, "admin-login-password-only", MAX_LOGIN_ATTEMPTS_PER_WINDOW)) {
         res.status(429).json({ error: "Too many sign-in attempts. Wait 15 minutes and try again." });
         return;
       }
@@ -365,116 +346,8 @@ export function registerAdminRoutes(app: Express): void {
         res.status(401).json({ error: "Check the approved email and admin password." });
         return;
       }
-      if (await hitRateLimit(db, "admin-otp-email", MAX_OTP_EMAILS_PER_WINDOW)) {
-        res.status(429).json({ error: "Too many code requests. Wait 15 minutes before requesting another." });
-        return;
-      }
 
       const now = new Date();
-      const [recentChallenge] = await db.select({ createdAt: adminLoginChallenges.createdAt }).from(adminLoginChallenges).where(and(
-        eq(adminLoginChallenges.email, ADMIN_EMAIL),
-        isNull(adminLoginChallenges.consumedAt),
-        gt(adminLoginChallenges.expiresAt, now),
-      )).limit(1);
-      if (recentChallenge && now.getTime() - recentChallenge.createdAt.getTime() < OTP_RESEND_COOLDOWN_MS) {
-        res.status(429).json({ error: "A code was just sent. Check your Gmail inbox before requesting another." });
-        return;
-      }
-
-      await db.update(adminLoginChallenges).set({ consumedAt: now }).where(and(
-        eq(adminLoginChallenges.email, ADMIN_EMAIL),
-        isNull(adminLoginChallenges.consumedAt),
-      ));
-      const challengeId = randomBytes(32).toString("hex");
-      const code = String(randomInt(100_000, 1_000_000));
-      await db.insert(adminLoginChallenges).values({
-        id: challengeId,
-        email: ADMIN_EMAIL,
-        codeHash: hashOneTimeCode(challengeId, code, ENV.adminPassword),
-        attemptCount: 0,
-        createdAt: now,
-        expiresAt: new Date(now.getTime() + ADMIN_OTP_TTL_MS),
-        consumedAt: null,
-      });
-
-      const mailer = createMailer();
-      try {
-        await mailer.sendMail({
-          from: `GG SUPPLY Admin <${ADMIN_EMAIL}>`,
-          to: ADMIN_EMAIL,
-          subject: "Your GG SUPPLY admin sign-in code",
-          text: `Your one-time GG SUPPLY admin sign-in code is ${code}. It expires in 10 minutes and can only be used once. If you did not request it, ignore this message.`,
-          html: `<div style="font-family:Arial,sans-serif;background:#0b0d12;color:#f4f5f7;padding:28px"><p style="letter-spacing:2px;color:#58e4ee;font-weight:bold">GG SUPPLY / ADMIN</p><h1 style="font-size:20px">Your sign-in code</h1><p style="color:#b8bec8">Enter this one-time code to finish signing in. It expires in 10 minutes and works once.</p><div style="font-size:34px;font-weight:bold;letter-spacing:9px;color:#ffffff;padding:16px 0">${code}</div><p style="font-size:12px;color:#8b929e">If you did not request this code, ignore this email.</p></div>`,
-        });
-      } catch (error) {
-        await db.update(adminLoginChallenges).set({ consumedAt: new Date() }).where(eq(adminLoginChallenges.id, challengeId));
-        const smtpError = error as { name?: unknown; code?: unknown; responseCode?: unknown };
-        const name = typeof smtpError.name === "string" ? smtpError.name : "UnknownError";
-        const code = typeof smtpError.code === "string" ? smtpError.code : "unknown";
-        const responseCode = typeof smtpError.responseCode === "number" ? smtpError.responseCode : null;
-        console.error("[Admin] OTP delivery failed:", { name, code, responseCode });
-        const authenticationRejected = code === "EAUTH" || responseCode === 535;
-        res.status(503).json({ error: authenticationRejected
-          ? "Gmail rejected the saved App Password. Replace it with a fresh 16-character Google App Password for the approved Gmail account using the secure input card."
-          : "The sign-in code could not be delivered. Check the Gmail SMTP settings and try again." });
-        return;
-      } finally {
-        mailer.close();
-      }
-      res.json({ ok: true, challengeId, maskedEmail: maskEmail(ADMIN_EMAIL), expiresInSeconds: ADMIN_OTP_TTL_MS / 1000 });
-    } catch (error) {
-      console.error("[Admin] Code request failed:", error instanceof Error ? error.name : "UnknownError");
-      res.status(500).json({ error: "Could not start admin sign-in." });
-    }
-  });
-
-  app.post("/api/admin/auth/verify-code", requireJson, async (req, res) => {
-    const body = verifyCodeSchema.safeParse(req.body);
-    if (!body.success) {
-      res.status(400).json({ error: "Enter the six-digit code from your Gmail." });
-      return;
-    }
-    try {
-      const db = await getDb();
-      if (!db) {
-        res.status(503).json({ error: "The admin database is unavailable." });
-        return;
-      }
-      const now = new Date();
-      const [challenge] = await db.select().from(adminLoginChallenges).where(eq(adminLoginChallenges.id, body.data.challengeId)).limit(1);
-      if (!challenge || challenge.email !== ADMIN_EMAIL || challenge.consumedAt || challenge.expiresAt.getTime() <= now.getTime() || challenge.attemptCount >= ADMIN_OTP_MAX_ATTEMPTS) {
-        res.status(401).json({ error: "That code is invalid or expired. Request a fresh code." });
-        return;
-      }
-
-      const candidateHash = hashOneTimeCode(challenge.id, body.data.code, ENV.adminPassword);
-      if (!constantTimeHexEqual(candidateHash, challenge.codeHash)) {
-        const nextAttempt = challenge.attemptCount + 1;
-        await db.update(adminLoginChallenges).set({
-          attemptCount: nextAttempt,
-          ...(nextAttempt >= ADMIN_OTP_MAX_ATTEMPTS ? { consumedAt: now } : {}),
-        }).where(and(
-          eq(adminLoginChallenges.id, challenge.id),
-          eq(adminLoginChallenges.attemptCount, challenge.attemptCount),
-          isNull(adminLoginChallenges.consumedAt),
-        ));
-        res.status(401).json({ error: "That code is invalid or expired. Request a fresh code." });
-        return;
-      }
-
-      const [consumeResult] = await db.update(adminLoginChallenges).set({ consumedAt: now }).where(and(
-        eq(adminLoginChallenges.id, challenge.id),
-        eq(adminLoginChallenges.email, ADMIN_EMAIL),
-        eq(adminLoginChallenges.codeHash, challenge.codeHash),
-        eq(adminLoginChallenges.attemptCount, challenge.attemptCount),
-        isNull(adminLoginChallenges.consumedAt),
-        gt(adminLoginChallenges.expiresAt, now),
-      ));
-      if ((consumeResult as { affectedRows?: number }).affectedRows !== 1) {
-        res.status(401).json({ error: "That code is invalid or expired. Request a fresh code." });
-        return;
-      }
-
       const sessionToken = randomBytes(32).toString("hex");
       await db.insert(adminSessions).values({
         tokenHash: hashSessionToken(sessionToken),
@@ -487,7 +360,7 @@ export function registerAdminRoutes(app: Express): void {
       res.cookie(ADMIN_CSRF_COOKIE, randomBytes(32).toString("hex"), adminCsrfCookieOptions(req.get("origin")));
       res.json({ ok: true, expiresInSeconds: ADMIN_SESSION_TTL_MS / 1000 });
     } catch (error) {
-      console.error("[Admin] Code verification failed:", error instanceof Error ? error.name : "UnknownError");
+      console.error("[Admin] Password sign-in failed:", error instanceof Error ? error.name : "UnknownError");
       res.status(500).json({ error: "Could not complete admin sign-in." });
     }
   });
